@@ -1,77 +1,87 @@
 <?php
 # Strafield Council scraper
-require 'scraperwiki.php';
-require 'simple_html_dom.php';
+require_once 'vendor/autoload.php';
+require_once 'vendor/openaustralia/scraperwiki/scraperwiki.php';
+
+use PGuardiario\PGBrowser;
+use Sunra\PhpSimple\HtmlDomParser;
+
 date_default_timezone_set('Australia/Sydney');
 
+# Default to 'thisweek', use MORPH_PERIOD to change to 'thismonth' or 'lastmonth' for data recovery
+switch(getenv('MORPH_PERIOD')) {
+    case 'thismonth' :
+        $period = 'thismonth';
+        break;
+    case 'lastmonth' :
+        $period = 'lastmonth';
+        break;
+    default          :
+        $period = 'thisweek';
+        break;
+}
+print "Getting '" .$period. "' data, changable via MORPH_PERIOD environment\n";
 
 ###
 ### Main code start here
 ###
-$url_base = "http://www.strathfield.nsw.gov.au";
+$url_base = "http://daenquiry.strathfield.nsw.gov.au";
+$da_page = $url_base. "/Pages/XC.Track/SearchApplication.aspx?d=" .$period. "&k=LodgementDate&t=";
 
-$da_page = $url_base . "/development/development-notifications-2/";
-$comment_base = "http://www.strathfield.nsw.gov.au/council/customer-service/contact-us/";
+$comment_base = "mailto:council@strathfield.nsw.gov.au";
 
-$dom = file_get_html($da_page);
+# Agreed Terms
+$browser = new PGBrowser();
+$page = $browser->get($url_base . "/Common/Common/terms.aspx");
+$form = $page->form();
+$form->set('ctl00$ctMain$chkAgree$chk1', 'on');
+$form->set('ctl00$ctMain$BtnAgree', 'I Agree');
+$page = $form->submit();
 
-# Assume it is single page, the web site doesn't allow to select period like last month
-$dataset  = $dom->find("div[class=listing-item]");
+# Fetch DA Page
+$page = $browser->get($da_page);
+$dom = HtmlDomParser::str_get_html($page->html);
+$applications = $dom->find("div[class=result]");
 
 # The usual, look for the data set and if needed, save it
-foreach ($dataset as $record) {
-    $dahtml = file_get_html($url_base . $record->find("a",0)->href);
+foreach ($applications as $application) {
+    $description       = $application->find("div", 0)->plaintext;
+    $description       = preg_split("/\\r\\n|\\r|\\n/", $description);
+    $description       = preg_replace('/\s+/', ' ', $description[1]);
+    $description       = ucwords(strtolower(trim($description)));
 
-    $council_reference = preg_replace('/\s+/', ' ', trim(html_entity_decode($dahtml->find("div[class=white-area] div[class=content] p",0)->plaintext)));
-    $council_reference = explode("DA Number: ", $council_reference, 2);
-    $council_reference = $council_reference[1];
+    $info_url          = $application->find("a", 0)->href;
+    $info_url          = str_replace("../..", "", $info_url);
+    $info_url          = $url_base . $info_url;
 
-    $address           = preg_replace('/\s+/', ' ', trim(html_entity_decode($dahtml->find("div[class=white-area] div[class=content] p",3)->plaintext)));
-    $address           = explode("Address: ", $address, 2);
-    $address           = $address[1] . ", NSW, Australia";
-
-    $description       = preg_replace('/\s+/', ' ', trim(html_entity_decode($dahtml->find("div[class=white-area] div[class=content] p",4)->plaintext)));
-    $description       = explode("Description: ", $description, 2);
-    $description       = $description[1];
-
-    $info_url          = $url_base . $record->find("a",0)->href;
-
-    $tempstr    = preg_replace('/\s+/', ' ', trim(html_entity_decode($dahtml->find("div[class=white-area] div[class=content] p",1)->plaintext)));
-    $tempstr    = explode("Dates of public exhibition: ", $tempstr, 2);
-    $tempstr    = explode(" to ", $tempstr[1], 2);
-
-    $on_notice_from = $tempstr[0];
-    $on_notice_from = explode('/', $on_notice_from);
-    $on_notice_from = "$on_notice_from[2]-$on_notice_from[1]-$on_notice_from[0]";
-    $on_notice_from = date('Y-m-d', strtotime($on_notice_from));
-
-    $on_notice_to   = $tempstr[1];
-    $on_notice_to   = explode('/', $on_notice_to);
-    $on_notice_to   = "$on_notice_to[2]-$on_notice_to[1]-$on_notice_to[0]";
-    $on_notice_to   = date('Y-m-d', strtotime($on_notice_to));
+    $date_received     = explode("Lodged:", $application->find("div", 0)->plaintext);
+    if (preg_match("/([0-9]{2})\/([0-9]{2})\/([0-9]{4})/", $date_received[1], $matches)) {
+        if (checkdate($matches[2], $matches[1], $matches[3])) {
+            $date_received =  "$matches[3]-$matches[2]-$matches[1]";
+        }
+    } else {
+        $date_received = null;
+    }
 
     # Put all information in an array
-    $application = array (
-        'council_reference' => $council_reference,
-        'address'           => $address,
+    $record = [
+        'council_reference' => trim($application->find("a", 0)->plaintext),
+        'address'           => trim($application->find("strong", 0)->plaintext),
         'description'       => $description,
         'info_url'          => $info_url,
         'comment_url'       => $comment_base,
         'date_scraped'      => date('Y-m-d'),
-        'on_notice_from'    => $on_notice_from,
-        'on_notice_to'      => $on_notice_to
-    );
+        'date_received'     => $date_received
+    ];
 
     # Check if record exist, if not, INSERT, else do nothing
-    $existingRecords = scraperwiki::select("* from data where `council_reference`='" . $application['council_reference'] . "'");
-    if ((count($existingRecords) == 0) && ($application['council_reference'] !== 'Not on file')) {
-        print ("Saving record " . $application['council_reference'] . "\n");
-        # print_r ($application);
-        scraperwiki::save(array('council_reference'), $application);
+    $existingRecords = scraperwiki::select("* from data where `council_reference`='" . $record['council_reference'] . "'");
+    if ((count($existingRecords) == 0) && ($record['council_reference'] !== 'Not on file')) {
+        print ("Saving record " . $record['council_reference'] . " - " . $record['address'] . "\n");
+//         print_r ($record);
+        scraperwiki::save(array('council_reference'), $record);
     } else {
-        print ("Skipping already saved record or ignore corrupted data - " . $application['council_reference'] . "\n");
+        print ("Skipping already saved record or ignore corrupted data - " . $record['council_reference'] . "\n");
     }
 }
 
-
-?>
