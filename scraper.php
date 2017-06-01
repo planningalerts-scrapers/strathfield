@@ -79,7 +79,7 @@ foreach ($applications as $application) {
     if ((count($existingRecords) == 0) && ($record['council_reference'] !== 'Not on file')) {
         print ("Saving record " . $record['council_reference'] . " - " . $record['address'] . "\n");
 //         print_r ($record);
-        scraperwiki::save(array('council_reference'), $record);
+        scraperwiki::save(['council_reference'], $record);
     } else {
         print ("Skipping already saved record or ignore corrupted data - " . $record['council_reference'] . "\n");
     }
