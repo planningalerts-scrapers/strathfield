@@ -2,12 +2,14 @@
 
 Strathfield Council involves the followings
 * Server - Standard HTTP
-* Cookie tracking - No
+* Cookie tracking - Yes
 * Pagnation - No
 * Javascript - No
 * Clearly defined data within a row - Yes
-* Need to request a second page to get all the information
 
-* Special gold star for this council, super easy to scrape
+Setup MORPH_PERIOD for data recovery, available options are
+* thisweek (default)
+* thismonth
+* lastmonth
 
 Enjoy
