@@ -16,7 +16,7 @@ $comment_base = "http://www.strathfield.nsw.gov.au/council/customer-service/cont
 $dom = file_get_html($da_page);
 
 # Assume it is single page, the web site doesn't allow to select period like last month
-$dataset  = $dom->find("div[class=listing-item]");
+$dataset  = $dom->find("li[class=link]");
 
 # The usual, look for the data set and if needed, save it
 foreach ($dataset as $record) {
