@@ -22,7 +22,7 @@ $dataset  = $dom->find("li[class=link]");
 foreach ($dataset as $record) {
     $dahtml = file_get_html($url_base . $record->find("a",0)->href);
 
-    $council_reference = preg_replace('/\s+/', ' ', trim(html_entity_decode($dahtml->find("div[class=white-area] div[class=content] p",0)->plaintext)));
+    $council_reference = preg_replace('/\s+/', ' ', trim(html_entity_decode($dahtml->find("div[class=white-area] div[class=content] p",0)->plaintext))); 
     $council_reference = explode("DA Number: ", $council_reference, 2);
     $council_reference = $council_reference[1];
 
@@ -30,7 +30,7 @@ foreach ($dataset as $record) {
     $address           = explode("Address: ", $address, 2);
     $address           = $address[1] . ", NSW, Australia";
 
-    $description       = preg_replace('/\s+/', ' ', trim(html_entity_decode($dahtml->find("div[class=white-area] div[class=content] p",4)->plaintext)));
+    $description       = preg_replace('/\s+/', ' ', trim(html_entity_decode($dahtml->find("div[class=white-area] div[class=content] p",5)->plaintext)));
     $description       = explode("Description: ", $description, 2);
     $description       = $description[1];
 
@@ -63,13 +63,15 @@ foreach ($dataset as $record) {
     );
 
     # Check if record exist, if not, INSERT, else do nothing
-    $existingRecords = scraperwiki::select("* from data where `council_reference`='" . $application['council_reference'] . "'");
-    if ((count($existingRecords) == 0) && ($application['council_reference'] !== 'Not on file')) {
-        print ("Saving record " . $application['council_reference'] . "\n");
-        # print_r ($application);
-        scraperwiki::save(array('council_reference'), $application);
-    } else {
-        print ("Skipping already saved record or ignore corrupted data - " . $application['council_reference'] . "\n");
+        if (!empty(trim($council_reference)) && !empty(trim($address))) {
+        $existingRecords = scraperwiki::select("* from data where `council_reference`='" . $application['council_reference'] . "'");
+        if ((count($existingRecords) == 0) && ($application['council_reference'] !== 'Not on file')) {
+            print ("Saving record " . $application['council_reference'] . "\n");
+            # print_r ($application);
+            scraperwiki::save(array('council_reference'), $application);
+        } else {
+            print ("Skipping already saved record or ignore corrupted data - " . $application['council_reference'] . "\n");
+        }
     }
 }
 
