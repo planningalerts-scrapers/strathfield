@@ -10,7 +10,7 @@ date_default_timezone_set('Australia/Sydney');
 ###
 $url_base = "http://www.strathfield.nsw.gov.au";
 
-$da_page = $url_base . "/development/development-notifications-2/";
+$da_page = $url_base . "/development/development-applications/development-notifications/";
 $comment_base = "http://www.strathfield.nsw.gov.au/council/customer-service/contact-us/";
 
 $dom = file_get_html($da_page);
