@@ -62,15 +62,9 @@ foreach ($dataset as $record) {
         'on_notice_to'      => $on_notice_to
     );
 
-    # Check if record exist, if not, INSERT, else do nothing
-    $existingRecords = scraperwiki::select("* from data where `council_reference`='" . $application['council_reference'] . "'");
-    if ((count($existingRecords) == 0) && ($application['council_reference'] !== 'Not on file')) {
-        print ("Saving record " . $application['council_reference'] . "\n");
-        # print_r ($application);
-        scraperwiki::save(array('council_reference'), $application);
-    } else {
-        print ("Skipping already saved record or ignore corrupted data - " . $application['council_reference'] . "\n");
-    }
+    print ("Saving record " . $application['council_reference'] . "\n");
+    # print_r ($application);
+    scraperwiki::save(array('council_reference'), $application);
 }
 
 
