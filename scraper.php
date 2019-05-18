@@ -10,19 +10,19 @@ date_default_timezone_set('Australia/Sydney');
 ###
 $url_base = "http://www.strathfield.nsw.gov.au";
 
-$da_page = $url_base . "/development/development-notifications-2/";
+$da_page = $url_base . "/development/development-applications/development-notifications/";
 $comment_base = "http://www.strathfield.nsw.gov.au/council/customer-service/contact-us/";
 
 $dom = file_get_html($da_page);
 
 # Assume it is single page, the web site doesn't allow to select period like last month
-$dataset  = $dom->find("div[class=listing-item]");
+$dataset  = $dom->find("li[class=link]");
 
 # The usual, look for the data set and if needed, save it
 foreach ($dataset as $record) {
     $dahtml = file_get_html($url_base . $record->find("a",0)->href);
 
-    $council_reference = preg_replace('/\s+/', ' ', trim(html_entity_decode($dahtml->find("div[class=white-area] div[class=content] p",0)->plaintext)));
+    $council_reference = preg_replace('/\s+/', ' ', trim(html_entity_decode($dahtml->find("div[class=white-area] div[class=content] p",0)->plaintext))); 
     $council_reference = explode("DA Number: ", $council_reference, 2);
     $council_reference = $council_reference[1];
 
@@ -30,7 +30,7 @@ foreach ($dataset as $record) {
     $address           = explode("Address: ", $address, 2);
     $address           = $address[1] . ", NSW, Australia";
 
-    $description       = preg_replace('/\s+/', ' ', trim(html_entity_decode($dahtml->find("div[class=white-area] div[class=content] p",4)->plaintext)));
+    $description       = preg_replace('/\s+/', ' ', trim(html_entity_decode($dahtml->find("div[class=white-area] div[class=content] p",5)->plaintext)));
     $description       = explode("Description: ", $description, 2);
     $description       = $description[1];
 
